@@ -1,0 +1,139 @@
+import { useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, Images, MapPin, Play, Search, X } from 'lucide-react'
+import { Album, demoAlbums, MediaItem } from './data'
+
+const yearOf = (date: string) => new Date(`${date}T12:00:00`).getFullYear().toString()
+const prettyDate = (date: string) => new Intl.DateTimeFormat('en', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(`${date}T12:00:00`))
+
+function App() {
+  const [albums, setAlbums] = useState<Album[]>(demoAlbums)
+  const [query, setQuery] = useState('')
+  const [year, setYear] = useState('All years')
+  const [activeAlbum, setActiveAlbum] = useState<Album | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [usingDemo, setUsingDemo] = useState(true)
+
+  useEffect(() => {
+    fetch('/.netlify/functions/drive-gallery')
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((data) => {
+        if (Array.isArray(data.albums) && data.albums.length) {
+          setAlbums(data.albums)
+          setUsingDemo(false)
+        }
+      })
+      .catch(() => undefined)
+  }, [])
+
+  const years = useMemo(() => ['All years', ...Array.from(new Set(albums.map((album) => yearOf(album.date)))).sort().reverse()], [albums])
+  const filtered = useMemo(() => albums.filter((album) => {
+    const matchesYear = year === 'All years' || yearOf(album.date) === year
+    const haystack = `${album.title} ${album.location} ${album.description}`.toLowerCase()
+    return matchesYear && haystack.includes(query.toLowerCase())
+  }), [albums, query, year])
+
+  const closeAlbum = () => {
+    setActiveAlbum(null)
+    setLightboxIndex(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (activeAlbum) {
+    const selected = lightboxIndex === null ? null : activeAlbum.media[lightboxIndex]
+    return (
+      <main className="album-page">
+        <header className="album-hero" style={{ backgroundImage: `linear-gradient(180deg, rgba(15,15,12,.18), rgba(15,15,12,.86)), url(${activeAlbum.cover})` }}>
+          <nav className="topbar">
+            <button className="brand" onClick={closeAlbum}>T<span>&</span>PU</button>
+            <button className="back-button" onClick={closeAlbum}><ArrowLeft size={17} /> All memories</button>
+          </nav>
+          <div className="album-title-wrap">
+            <p className="kicker">{activeAlbum.eyebrow}</p>
+            <h1>{activeAlbum.title}</h1>
+            <div className="album-meta"><span><CalendarDays size={16} /> {prettyDate(activeAlbum.date)}</span><span><MapPin size={16} /> {activeAlbum.location}</span></div>
+          </div>
+        </header>
+        <section className="album-content">
+          <div className="album-intro">
+            <p>{activeAlbum.description}</p>
+            <span><Images size={18} /> {activeAlbum.media.length} memories</span>
+          </div>
+          <div className="masonry">
+            {activeAlbum.media.map((item, index) => (
+              <button className={`media-tile tile-${index % 4}`} key={item.id} onClick={() => setLightboxIndex(index)} aria-label={`Open ${item.name}`}>
+                <img src={item.thumbnail} alt={item.name} loading="lazy" />
+                {item.type === 'video' && <span className="play"><Play fill="currentColor" /></span>}
+                <span className="media-name">{item.name}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+        {selected && <Lightbox item={selected} index={lightboxIndex!} total={activeAlbum.media.length} onClose={() => setLightboxIndex(null)} onMove={(step) => setLightboxIndex((lightboxIndex! + step + activeAlbum.media.length) % activeAlbum.media.length)} />}
+      </main>
+    )
+  }
+
+  return (
+    <main>
+      <header className="home-hero">
+        <nav className="topbar">
+          <div className="brand">T<span>&</span>PU</div>
+          <a href="#memories" className="nav-link">Browse memories <ArrowUpRight size={16} /></a>
+        </nav>
+        <div className="hero-copy">
+          <p className="kicker">Our shared story, still unfolding</p>
+          <h1>The moments<br />we keep <em>forever.</em></h1>
+          <p className="hero-subtitle">A living collection of faraway places, loud celebrations, and the people who made them unforgettable.</p>
+        </div>
+        <div className="hero-foot"><span>Scroll to wander</span><span>{albums.length} stories · {albums.reduce((sum, album) => sum + album.media.length, 0)} memories</span></div>
+      </header>
+
+      <section className="collection" id="memories">
+        <div className="section-heading">
+          <div><p className="kicker dark">The collection</p><h2>Where should we<br />go back to?</h2></div>
+          <p>Every folder holds a story. Choose one and step back inside.</p>
+        </div>
+        <div className="filters">
+          <label className="search"><Search size={18} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search places and moments" /></label>
+          <div className="years" aria-label="Filter albums by year">
+            {years.map((item) => <button className={item === year ? 'active' : ''} key={item} onClick={() => setYear(item)}>{item}</button>)}
+          </div>
+        </div>
+        <div className="album-grid">
+          {filtered.map((album, index) => (
+            <button className={`album-card card-${index % 3}`} key={album.id} onClick={() => { setActiveAlbum(album); window.scrollTo(0, 0) }}>
+              <div className="card-image"><img src={album.cover} alt="" /><span className="count"><Images size={15} /> {album.media.length}</span></div>
+              <div className="card-copy"><div><p>{album.eyebrow}</p><h3>{album.title}</h3></div><ArrowUpRight /></div>
+              <div className="card-meta"><span>{album.location}</span><span>{yearOf(album.date)}</span></div>
+            </button>
+          ))}
+        </div>
+        {!filtered.length && <div className="empty"><h3>No memories found</h3><p>Try another search or year.</p></div>}
+      </section>
+
+      <footer><div className="brand">T<span>&</span>PU</div><p>Made for the people who were there.</p>{usingDemo && <span className="demo-note">Preview collection</span>}</footer>
+    </main>
+  )
+}
+
+function Lightbox({ item, index, total, onClose, onMove }: { item: MediaItem; index: number; total: number; onClose: () => void; onMove: (step: number) => void }) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+      if (event.key === 'ArrowLeft') onMove(-1)
+      if (event.key === 'ArrowRight') onMove(1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose, onMove])
+
+  return <div className="lightbox" role="dialog" aria-modal="true" aria-label={item.name}>
+    <button className="lightbox-close" onClick={onClose} aria-label="Close"><X /></button>
+    <button className="lightbox-nav prev" onClick={() => onMove(-1)} aria-label="Previous"><ChevronLeft /></button>
+    {item.type === 'video' ? <video src={item.src} controls autoPlay /> : <img src={item.src} alt={item.name} />}
+    <button className="lightbox-nav next" onClick={() => onMove(1)} aria-label="Next"><ChevronRight /></button>
+    <div className="lightbox-caption"><span>{item.name}</span><span>{index + 1} / {total}</span></div>
+  </div>
+}
+
+export default App
