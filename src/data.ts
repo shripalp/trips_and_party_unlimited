@@ -1,7 +1,7 @@
 export type MediaItem = {
   id: string
   name: string
-  type: 'image' | 'video'
+  type: 'image' | 'video' | 'document'
   src: string
   thumbnail: string
 }

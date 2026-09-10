@@ -5,6 +5,14 @@ const FOLDER_MIME = 'application/vnd.google-apps.folder'
 
 type DriveFile = { id: string; name: string; mimeType: string; createdTime?: string; modifiedTime?: string; thumbnailLink?: string; imageMediaMetadata?: { width?: number; height?: number } }
 
+function fileType(mimeType: string): 'image' | 'video' | 'document' | null {
+  if (mimeType === FOLDER_MIME) return null
+  if (mimeType.startsWith('image/')) return 'image'
+  if (mimeType.startsWith('video/')) return 'video'
+  if (mimeType === 'application/pdf' || mimeType.startsWith('application/vnd.google-apps.') || mimeType.includes('wordprocessingml') || mimeType.includes('spreadsheetml') || mimeType.includes('presentationml') || mimeType === 'application/msword' || mimeType === 'application/vnd.ms-excel' || mimeType === 'application/vnd.ms-powerpoint' || mimeType.startsWith('text/')) return 'document'
+  return null
+}
+
 async function listFiles(folderId: string, apiKey: string): Promise<DriveFile[]> {
   const params = new URLSearchParams({
     key: apiKey,
@@ -28,16 +36,16 @@ export const handler: Handler = async () => {
     const rootFiles = await listFiles(rootFolder, apiKey)
     const folders = rootFiles.filter((file) => file.mimeType === FOLDER_MIME)
     const albums = await Promise.all(folders.map(async (folder) => {
-      const files = (await listFiles(folder.id, apiKey)).filter((file) => file.mimeType.startsWith('image/') || file.mimeType.startsWith('video/'))
+      const files = (await listFiles(folder.id, apiKey)).filter((file) => fileType(file.mimeType))
       const media = files.map((file) => {
-        const isVideo = file.mimeType.startsWith('video/')
+        const type = fileType(file.mimeType)!
         const preview = file.thumbnailLink?.replace(/=s\d+$/, '=w2400')
         return {
           id: file.id,
           name: file.name.replace(/\.[^.]+$/, ''),
-          type: isVideo ? 'video' : 'image',
-          src: isVideo ? `/.netlify/functions/drive-media?id=${encodeURIComponent(file.id)}` : preview ?? `/.netlify/functions/drive-media?id=${encodeURIComponent(file.id)}`,
-          thumbnail: file.thumbnailLink?.replace(/=s\d+$/, '=w1200') ?? `/.netlify/functions/drive-media?id=${encodeURIComponent(file.id)}`,
+          type,
+          src: type === 'image' ? preview ?? `/.netlify/functions/drive-media?id=${encodeURIComponent(file.id)}` : `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview`,
+          thumbnail: file.thumbnailLink?.replace(/=s\d+$/, '=w1200') ?? `https://drive.google.com/thumbnail?id=${encodeURIComponent(file.id)}&sz=w1200`,
         }
       })
       const dateMatch = folder.name.match(/(20\d{2})[-_ ](\d{2})[-_ ](\d{2})/)

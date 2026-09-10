@@ -18,4 +18,4 @@ The site uses a polished demo collection until Google Drive is configured.
 3. Add `GOOGLE_DRIVE_API_KEY` and `GOOGLE_DRIVE_FOLDER_ID` as Netlify environment variables.
 4. Name folders with an optional date, such as `Banff Winter Weekend - 2026-02-14`.
 
-Each immediate subfolder becomes an album. Supported files are images and videos; the first media file becomes the cover.
+Each immediate subfolder becomes an album. Supported files include images, videos, PDFs, Google Docs, Sheets, Slides, and common Microsoft Office formats. The first available thumbnail becomes the cover.

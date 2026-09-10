@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, ArrowUpRight, CalendarDays, Check, ChevronLeft, ChevronRight, Images, MapPin, Play, RefreshCw, Search, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, CalendarDays, Check, ChevronLeft, ChevronRight, FileText, Images, MapPin, Play, RefreshCw, Search, X } from 'lucide-react'
 import { Album, demoAlbums, MediaItem } from './data'
 
 const yearOf = (date: string) => new Date(`${date}T12:00:00`).getFullYear().toString()
@@ -14,6 +14,7 @@ function App() {
   const [usingDemo, setUsingDemo] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [justRefreshed, setJustRefreshed] = useState(false)
+  const [mediaFilter, setMediaFilter] = useState<'all' | MediaItem['type']>('all')
 
   const refreshGallery = useCallback((force = false) => {
     if (force) setIsRefreshing(true)
@@ -50,11 +51,18 @@ function App() {
   const closeAlbum = () => {
     setActiveAlbum(null)
     setLightboxIndex(null)
+    setMediaFilter('all')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   if (activeAlbum) {
-    const selected = lightboxIndex === null ? null : activeAlbum.media[lightboxIndex]
+    const visibleMedia = mediaFilter === 'all' ? activeAlbum.media : activeAlbum.media.filter((item) => item.type === mediaFilter)
+    const selected = lightboxIndex === null ? null : visibleMedia[lightboxIndex]
+    const counts = {
+      image: activeAlbum.media.filter((item) => item.type === 'image').length,
+      video: activeAlbum.media.filter((item) => item.type === 'video').length,
+      document: activeAlbum.media.filter((item) => item.type === 'document').length,
+    }
     return (
       <main className="album-page">
         <header className="album-hero" style={{ backgroundImage: `linear-gradient(180deg, rgba(15,15,12,.18), rgba(15,15,12,.86)), url(${activeAlbum.cover})` }}>
@@ -73,17 +81,25 @@ function App() {
             <p>{activeAlbum.description}</p>
             <span><Images size={18} /> {activeAlbum.media.length} memories</span>
           </div>
+          <div className="media-tabs" role="tablist" aria-label="Album content">
+            <button className={mediaFilter === 'all' ? 'active' : ''} onClick={() => { setMediaFilter('all'); setLightboxIndex(null) }}>All <span>{activeAlbum.media.length}</span></button>
+            <button className={mediaFilter === 'image' ? 'active' : ''} onClick={() => { setMediaFilter('image'); setLightboxIndex(null) }}>Photos <span>{counts.image}</span></button>
+            <button className={mediaFilter === 'video' ? 'active' : ''} onClick={() => { setMediaFilter('video'); setLightboxIndex(null) }}>Videos <span>{counts.video}</span></button>
+            <button className={mediaFilter === 'document' ? 'active' : ''} onClick={() => { setMediaFilter('document'); setLightboxIndex(null) }}>Documents <span>{counts.document}</span></button>
+          </div>
           <div className="masonry">
-            {activeAlbum.media.map((item, index) => (
+            {visibleMedia.map((item, index) => (
               <button className={`media-tile tile-${index % 4}`} key={item.id} onClick={() => setLightboxIndex(index)} aria-label={`Open ${item.name}`}>
                 <img src={item.thumbnail} alt={item.name} loading="lazy" />
                 {item.type === 'video' && <span className="play"><Play fill="currentColor" /></span>}
+                {item.type === 'document' && <span className="play document-icon"><FileText /></span>}
                 <span className="media-name">{item.name}</span>
               </button>
             ))}
           </div>
+          {!visibleMedia.length && <div className="empty"><h3>No {mediaFilter === 'image' ? 'photos' : mediaFilter === 'all' ? 'items' : `${mediaFilter}s`} yet</h3><p>Add them to this album’s Google Drive folder, then refresh.</p></div>}
         </section>
-        {selected && <Lightbox item={selected} index={lightboxIndex!} total={activeAlbum.media.length} onClose={() => setLightboxIndex(null)} onMove={(step) => setLightboxIndex((lightboxIndex! + step + activeAlbum.media.length) % activeAlbum.media.length)} />}
+        {selected && <Lightbox item={selected} index={lightboxIndex!} total={visibleMedia.length} onClose={() => setLightboxIndex(null)} onMove={(step) => setLightboxIndex((lightboxIndex! + step + visibleMedia.length) % visibleMedia.length)} />}
       </main>
     )
   }
@@ -151,7 +167,7 @@ function Lightbox({ item, index, total, onClose, onMove }: { item: MediaItem; in
   return <div className="lightbox" role="dialog" aria-modal="true" aria-label={item.name}>
     <button className="lightbox-close" onClick={onClose} aria-label="Close"><X /></button>
     <button className="lightbox-nav prev" onClick={() => onMove(-1)} aria-label="Previous"><ChevronLeft /></button>
-    {item.type === 'video' ? <video src={item.src} controls autoPlay /> : <img src={item.src} alt={item.name} />}
+    {item.type === 'image' ? <img src={item.src} alt={item.name} /> : <iframe className="drive-preview" src={item.src} title={item.name} allow="autoplay" />}
     <button className="lightbox-nav next" onClick={() => onMove(1)} aria-label="Next"><ChevronRight /></button>
     <div className="lightbox-caption"><span>{item.name}</span><span>{index + 1} / {total}</span></div>
   </div>
