@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, Images, MapPin, Play, Search, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, ArrowUpRight, CalendarDays, Check, ChevronLeft, ChevronRight, Images, MapPin, Play, RefreshCw, Search, X } from 'lucide-react'
 import { Album, demoAlbums, MediaItem } from './data'
 
 const yearOf = (date: string) => new Date(`${date}T12:00:00`).getFullYear().toString()
@@ -12,18 +12,33 @@ function App() {
   const [activeAlbum, setActiveAlbum] = useState<Album | null>(null)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [usingDemo, setUsingDemo] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [justRefreshed, setJustRefreshed] = useState(false)
 
-  useEffect(() => {
-    fetch('/.netlify/functions/drive-gallery')
+  const refreshGallery = useCallback((force = false) => {
+    if (force) setIsRefreshing(true)
+    const cacheKey = force ? Date.now() : Math.floor(Date.now() / 60_000)
+    return fetch(`/.netlify/functions/drive-gallery?refresh=${cacheKey}`, { cache: 'no-store' })
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then((data) => {
         if (Array.isArray(data.albums) && data.albums.length) {
           setAlbums(data.albums)
           setUsingDemo(false)
+          if (force) {
+            setJustRefreshed(true)
+            window.setTimeout(() => setJustRefreshed(false), 2200)
+          }
         }
       })
       .catch(() => undefined)
+      .finally(() => setIsRefreshing(false))
   }, [])
+
+  useEffect(() => {
+    refreshGallery()
+    const interval = window.setInterval(() => refreshGallery(), 60_000)
+    return () => window.clearInterval(interval)
+  }, [refreshGallery])
 
   const years = useMemo(() => ['All years', ...Array.from(new Set(albums.map((album) => yearOf(album.date)))).sort().reverse()], [albums])
   const filtered = useMemo(() => albums.filter((album) => {
@@ -95,8 +110,14 @@ function App() {
         </div>
         <div className="filters">
           <label className="search"><Search size={18} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search places and moments" /></label>
-          <div className="years" aria-label="Filter albums by year">
-            {years.map((item) => <button className={item === year ? 'active' : ''} key={item} onClick={() => setYear(item)}>{item}</button>)}
+          <div className="filter-actions">
+            <div className="years" aria-label="Filter albums by year">
+              {years.map((item) => <button className={item === year ? 'active' : ''} key={item} onClick={() => setYear(item)}>{item}</button>)}
+            </div>
+            {!usingDemo && <button className={`refresh-button ${justRefreshed ? 'success' : ''}`} onClick={() => refreshGallery(true)} disabled={isRefreshing}>
+              {justRefreshed ? <Check size={15} /> : <RefreshCw size={15} className={isRefreshing ? 'spin' : ''} />}
+              {justRefreshed ? 'Up to date' : isRefreshing ? 'Refreshing…' : 'Refresh memories'}
+            </button>}
           </div>
         </div>
         <div className="album-grid">

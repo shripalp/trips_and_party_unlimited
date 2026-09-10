@@ -51,7 +51,7 @@ export const handler: Handler = async () => {
         media,
       }
     }))
-    return { statusCode: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300, s-maxage=900' }, body: JSON.stringify({ albums: albums.filter((album) => album.media.length) }) }
+    return { statusCode: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=30' }, body: JSON.stringify({ albums: albums.filter((album) => album.media.length) }) }
   } catch (error) {
     return { statusCode: 502, body: JSON.stringify({ error: error instanceof Error ? error.message : 'Unable to read Google Drive' }) }
   }
