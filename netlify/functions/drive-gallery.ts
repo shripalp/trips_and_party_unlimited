@@ -29,13 +29,17 @@ export const handler: Handler = async () => {
     const folders = rootFiles.filter((file) => file.mimeType === FOLDER_MIME)
     const albums = await Promise.all(folders.map(async (folder) => {
       const files = (await listFiles(folder.id, apiKey)).filter((file) => file.mimeType.startsWith('image/') || file.mimeType.startsWith('video/'))
-      const media = files.map((file) => ({
-        id: file.id,
-        name: file.name.replace(/\.[^.]+$/, ''),
-        type: file.mimeType.startsWith('video/') ? 'video' : 'image',
-        src: `/.netlify/functions/drive-media?id=${encodeURIComponent(file.id)}`,
-        thumbnail: file.thumbnailLink?.replace(/=s\d+$/, '=w1200') ?? `/.netlify/functions/drive-media?id=${encodeURIComponent(file.id)}`,
-      }))
+      const media = files.map((file) => {
+        const isVideo = file.mimeType.startsWith('video/')
+        const preview = file.thumbnailLink?.replace(/=s\d+$/, '=w2400')
+        return {
+          id: file.id,
+          name: file.name.replace(/\.[^.]+$/, ''),
+          type: isVideo ? 'video' : 'image',
+          src: isVideo ? `/.netlify/functions/drive-media?id=${encodeURIComponent(file.id)}` : preview ?? `/.netlify/functions/drive-media?id=${encodeURIComponent(file.id)}`,
+          thumbnail: file.thumbnailLink?.replace(/=s\d+$/, '=w1200') ?? `/.netlify/functions/drive-media?id=${encodeURIComponent(file.id)}`,
+        }
+      })
       const dateMatch = folder.name.match(/(20\d{2})[-_ ](\d{2})[-_ ](\d{2})/)
       const date = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : folder.createdTime?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)
       const title = folder.name.replace(/[-_ ]?20\d{2}[-_ ]\d{2}[-_ ]\d{2}/, '').replace(/[_-]+/g, ' ').trim()
