@@ -97,7 +97,7 @@ function App() {
         </nav>
         <div className="hero-copy">
           <p className="kicker">Our shared story, still unfolding</p>
-          <h1>The moments<br />we keep <em>forever.</em></h1>
+          <h1>Trips and Parties<br /><em>Unlimited.</em></h1>
           <p className="hero-subtitle">A living collection of faraway places, loud celebrations, and the people who made them unforgettable.</p>
         </div>
         <div className="hero-foot"><span>Scroll to wander</span><span>{albums.length} stories · {albums.reduce((sum, album) => sum + album.media.length, 0)} memories</span></div>
@@ -123,8 +123,8 @@ function App() {
         <div className="album-grid">
           {filtered.map((album, index) => (
             <button className={`album-card card-${index % 3}`} key={album.id} onClick={() => { setActiveAlbum(album); window.scrollTo(0, 0) }}>
-              <div className="card-image"><img src={album.cover} alt="" /><span className="count"><Images size={15} /> {album.media.length}</span></div>
               <div className="card-copy"><div><p>{album.eyebrow}</p><h3>{album.title}</h3></div><ArrowUpRight /></div>
+              <div className="card-image"><img src={album.cover} alt="" /><span className="count"><Images size={15} /> {album.media.length}</span></div>
               <div className="card-meta"><span>{album.location}</span><span>{yearOf(album.date)}</span></div>
             </button>
           ))}
