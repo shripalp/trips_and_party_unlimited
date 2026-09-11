@@ -47,6 +47,7 @@ function App() {
     const haystack = `${album.title} ${album.location} ${album.description}`.toLowerCase()
     return matchesYear && haystack.includes(query.toLowerCase())
   }), [albums, query, year])
+  const newestAlbum = useMemo(() => [...albums].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0], [albums])
 
   const closeAlbum = () => {
     setActiveAlbum(null)
@@ -106,15 +107,18 @@ function App() {
 
   return (
     <main>
-      <header className="home-hero">
+      <header className="home-hero" style={newestAlbum ? { backgroundImage: `linear-gradient(90deg, rgba(20,25,18,.72), rgba(20,25,18,.08)), url(${newestAlbum.cover})` } : undefined}>
         <nav className="topbar">
           <div className="brand">T<span>&</span>PU</div>
           <a href="#memories" className="nav-link">Browse memories <ArrowUpRight size={16} /></a>
         </nav>
         <div className="hero-copy">
-          <p className="kicker">Our shared story, still unfolding</p>
+          <p className="kicker">Newest memory · {newestAlbum?.title ?? 'Our shared story'}</p>
           <h1>Trips and Parties<br /><em>Unlimited.</em></h1>
           <p className="hero-subtitle">A living collection of faraway places, loud celebrations, and the people who made them unforgettable.</p>
+          {newestAlbum && <button className="hero-album-link" onClick={() => { setActiveAlbum(newestAlbum); window.scrollTo(0, 0) }}>
+            Explore {newestAlbum.title} <ArrowUpRight size={17} />
+          </button>}
         </div>
         <div className="hero-foot"><span>Scroll to wander</span><span>{albums.length} stories · {albums.reduce((sum, album) => sum + album.media.length, 0)} memories</span></div>
       </header>

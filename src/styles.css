@@ -20,6 +20,8 @@ button { color: inherit; }
 .hero-copy h1 { font-size: clamp(48px,7.4vw,112px); }
 .hero-copy h1 em { color: #efb96f; font-weight: 500; }
 .hero-subtitle { font-family: 'Playfair Display', serif; font-size: clamp(17px,2vw,23px); line-height: 1.5; max-width: 630px; margin: 28px 0 0; color: rgba(255,250,240,.82); }
+.hero-album-link { margin-top: 28px; color: #fffaf0; border: 1px solid rgba(255,255,255,.38); background: rgba(20,20,15,.24); backdrop-filter: blur(10px); border-radius: 999px; padding: 12px 17px; display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-size: 12px; letter-spacing: .04em; transition: background .2s, border-color .2s, transform .2s; }
+.hero-album-link:hover { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.7); transform: translateY(-1px); }
 .hero-foot { position: absolute; z-index: 2; bottom: 24px; left: 7vw; right: 7vw; display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: .16em; font-size: 9px; color: rgba(255,255,255,.72); }
 .collection { padding: clamp(80px,10vw,145px) 7vw; }
 .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 40px; margin-bottom: 70px; }
